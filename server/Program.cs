@@ -395,7 +395,7 @@ app.MapPost("/api/login", async (HttpContext context, UserLogin user, SqliteConn
 
     if (context.Session.GetInt32("id") != null)
     {
-        return Results.BadRequest("Already logged in");
+        return Results.Ok(new { message = "Already logged in" });
     }
 
     var sql = "SELECT * FROM users WHERE email = $email AND password = $password";
@@ -438,7 +438,7 @@ app.MapGet("/api/login", (HttpContext context) =>
 
     if (id == null)
     {
-        return Results.BadRequest("Not logged in");
+        return Results.Json(new { message = "Not logged in" }, statusCode: 401);
     }
 
     return Results.Ok(new { id, username, email, role });
