@@ -21,7 +21,7 @@ A .NET Core Web API application for managing an online shop with products, categ
   - User authentication
 
 - **Order System**
-  - Create orders with multiple items
+  - Create orders
   - Track order history
   - View orders by user
   - Automatic price calculation
