@@ -5,6 +5,160 @@ public static class DatabaseSeeder
 {
     public static async Task PopulateSampleData(SqliteConnection connection)
     {
+        // Database setup
+        var createTableRoles = @"
+            CREATE TABLE IF NOT EXISTS roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE
+            )";
+
+        var createTableUsers = @"
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role_id INTEGER,
+                FOREIGN KEY(role_id) REFERENCES roles(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+            )";
+
+        var createTableCategories = @"
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE
+            )";
+
+        var createTableProducts = @"
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                price INTEGER NOT NULL,
+                category_id INTEGER,
+                FOREIGN KEY(category_id) REFERENCES categories(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+            )";
+
+        var createProductsView = @"
+            CREATE VIEW IF NOT EXISTS products_view AS
+            SELECT products.id, products.name, products.price, categories.name AS category
+            FROM products
+            LEFT JOIN categories ON products.category_id = categories.id
+            ";
+
+        var createUserView = @"
+            CREATE VIEW IF NOT EXISTS user_view AS
+            SELECT users.id, users.username, users.email, roles.name AS role
+            FROM users
+            LEFT JOIN roles ON users.role_id = roles.id
+            ";
+
+        var createTableOrders = @"
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER,
+                product_id INTEGER,
+                quantity INTEGER NOT NULL,
+                price INTEGER NOT NULL,
+                total INTEGER GENERATED ALWAYS AS (quantity * price) VIRTUAL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(customer_id) REFERENCES users(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE,
+                FOREIGN KEY(product_id) REFERENCES products(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+            )";
+
+        var createTableOrderView = @"
+            CREATE VIEW IF NOT EXISTS order_view AS
+            SELECT orders.id, users.username, products.name as item, orders.quantity, orders.price, orders.total, orders.created_at
+            FROM orders
+            LEFT JOIN users ON orders.customer_id = users.id
+            LEFT JOIN products ON orders.product_id = products.id
+            ";
+
+        try
+        {
+            await connection.OpenAsync();
+            Console.WriteLine("**Connected to database**\n");
+
+            Console.WriteLine("Enabling foreign keys...");
+            using (var command = new SqliteCommand("PRAGMA foreign_keys = ON", connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Foreign keys enabled\n");
+
+            Console.WriteLine("Creating table roles...if not exists");
+            using (var command = new SqliteCommand(createTableRoles, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Creating table roles completed\n");
+
+            Console.WriteLine("Creating table users...if not exists");
+            using (var command = new SqliteCommand(createTableUsers, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Creating table users completed\n");
+
+            Console.WriteLine("Creating table categories...if not exists");
+            using (var command = new SqliteCommand(createTableCategories, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Creating table categories completed\n");
+
+            Console.WriteLine("Creating table products...if not exists");
+            using (var command = new SqliteCommand(createTableProducts, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Creating table products completed\n");
+
+            Console.WriteLine("Creating table orders...if not exists");
+            using (var command = new SqliteCommand(createTableOrders, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("Creating table orders completed\n");
+
+            Console.WriteLine("Creating view order_view...if not exists");
+            using (var command = new SqliteCommand(createTableOrderView, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("View order_view created\n");
+
+            Console.WriteLine("Creating view user_view...if not exists");
+            using (var command = new SqliteCommand(createUserView, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("View user_view created\n");
+
+            Console.WriteLine("Creating view products_view...if not exists");
+            using (var command = new SqliteCommand(createProductsView, connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+            Console.WriteLine("View products_view created\n");
+
+            Console.WriteLine("**Database setup completed**");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+
+
+
+
         Console.WriteLine("Populating database with sample data...\n");
 
         // Sample Roles
