@@ -72,7 +72,7 @@ app.MapPatch("/api/users/{id}", UserHandlers.UpdateUser).RequireRole("admin");
 app.MapDelete("/api/users/{id}", UserHandlers.DeleteUser).RequireRole("admin");
 
 // Orders API
-app.MapPost("/api/orders", OrderHandlers.CreateOrder).RequireRole("admin");
+app.MapPost("/api/orders", OrderHandlers.CreateOrder).RequireAuthentication();
 
 app.MapGet("/api/orders", OrderHandlers.GetOrders).RequireRole("admin");
 
@@ -82,8 +82,8 @@ app.MapDelete("/api/orders/{id}", OrderHandlers.DeleteOrder).RequireRole("admin"
 
 
 // NOTE: This endpoint adress is a little different due to risk of conflict with the previous ones like /api/orders/{id} and /api/users/{id} 
-app.MapGet("/api/user/{id}/orders", OrderHandlers.GetOrdersByUser);
-app.MapGet("/api/user/{id}/orders/{orderId}", OrderHandlers.GetOrderByUser);
+app.MapGet("/api/user/{id}/orders", OrderHandlers.GetOrdersByUser).RequireAuthenticationWithId();
+app.MapGet("/api/user/{id}/orders/{orderId}", OrderHandlers.GetOrderByUser).RequireAuthenticationWithId();
 
 // Closing connection when application stops
 app.Lifetime.ApplicationStopping.Register(() =>

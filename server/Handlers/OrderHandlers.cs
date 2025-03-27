@@ -60,9 +60,13 @@ public static class OrderHandlers
         return Results.NotFound("Order not found");
     }
 
-    public static async Task<IResult> CreateOrder(SqliteConnection connection, OrderCreate order)
+    public static async Task<IResult> CreateOrder(SqliteConnection connection, HttpContext context, OrderCreate order)
     {
         EnsureConnectionOpen(connection);
+
+        var customerId = context.Session.GetInt32("id");
+        if (customerId == null)
+            return Results.Unauthorized();
 
         var priceCommand = new SqliteCommand("SELECT price FROM products WHERE id = $id", connection);
         priceCommand.Parameters.AddWithValue("$id", order.ProductId);
@@ -72,7 +76,7 @@ public static class OrderHandlers
 
         var sql = "INSERT INTO orders (customer_id, product_id, quantity, price) VALUES ($customer_id, $product_id, $quantity, $price)";
         using var command = new SqliteCommand(sql, connection);
-        command.Parameters.AddWithValue("$customer_id", order.CustomerId);
+        command.Parameters.AddWithValue("$customer_id", customerId);
         command.Parameters.AddWithValue("$product_id", order.ProductId);
         command.Parameters.AddWithValue("$quantity", order.Quantity);
         command.Parameters.AddWithValue("$price", price);
@@ -80,8 +84,8 @@ public static class OrderHandlers
         using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
         var id = (long?)await command2.ExecuteScalarAsync();
         Console.WriteLine($"Info: Order added to database");
-        var total = order.Quantity * (Int64)price;
-        return Results.Ok(new { customer_id = order.CustomerId, product_id = order.ProductId, quantity = order.Quantity, price, total, insertId = id });
+        var total = order.Quantity * (long)price;
+        return Results.Ok(new { customer_id = customerId, product_id = order.ProductId, quantity = order.Quantity, price, total, insertId = id });
     }
 
     public static async Task<IResult> DeleteOrder(SqliteConnection connection, int id)
