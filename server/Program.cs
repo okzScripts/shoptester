@@ -80,6 +80,8 @@ app.MapGet("/api/orders/{id}", OrderHandlers.GetOrder).RequireRole("admin");
 
 app.MapDelete("/api/orders/{id}", OrderHandlers.DeleteOrder).RequireRole("admin");
 
+//DETTA ÄR TEST
+
 
 // NOTE: This endpoint adress is a little different due to risk of conflict with the previous ones like /api/orders/{id} and /api/users/{id} 
 app.MapGet("/api/user/{id}/orders", OrderHandlers.GetOrdersByUser).RequireAuthenticationWithId();
