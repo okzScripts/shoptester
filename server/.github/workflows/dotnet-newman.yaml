@@ -38,7 +38,7 @@ jobs:
 
       - name: Run API tests with Newman
         run: |
-          newman run tests/your-collection.postman_collection.json \
-            --environment tests/your-environment.postman_environment.json \
+          newman run server/ShopTesterFlowOK.postman_collection.json \
+            --environment server/local-5000-api.postman_environment333.json \
             --reporters cli,json \
             --reporter-json-export newman-report.json
