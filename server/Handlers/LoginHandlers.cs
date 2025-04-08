@@ -19,7 +19,7 @@ public static class LoginHandlers
 
         if (string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.Password))
         {
-            return Results.BadRequest("Email and password are required");
+            return Results.BadRequest(new { error = "Email and password are required" });
         }
 
         if (context.Session.GetInt32("id") != null)
@@ -54,7 +54,7 @@ public static class LoginHandlers
             return Results.Ok(new { id, username, email, role });
         }
 
-        return Results.NotFound("User not found");
+        return Results.NotFound(new { message = "User not found" });
     }
 
     public static async Task<IResult> GetLogin(HttpContext context)

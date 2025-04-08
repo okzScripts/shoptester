@@ -49,23 +49,33 @@ public static class UserHandlers
             );
             return Results.Ok(user);
         }
-        return Results.NotFound("User not found");
+        return Results.NotFound(new { message = "User not found" });
     }
 
     public static async Task<IResult> CreateUser(SqliteConnection connection, UserCreate user)
     {
         EnsureConnectionOpen(connection);
+        if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.Password) || user.RoleId == null)
+            return Results.BadRequest(new { error = "Username, email, password and role are required" });
         var sql = "INSERT INTO users (username, email, password, role_id) VALUES ($username, $email, $password, $role_id)";
         using var command = new SqliteCommand(sql, connection);
         command.Parameters.AddWithValue("$username", user.Username);
         command.Parameters.AddWithValue("$email", user.Email);
         command.Parameters.AddWithValue("$password", user.Password);
         command.Parameters.AddWithValue("$role_id", user.RoleId);
-        await command.ExecuteNonQueryAsync();
-        using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
-        var id = (long?)await command2.ExecuteScalarAsync();
-        Console.WriteLine($"Info: User {user.Username} added to database");
-        return Results.Ok(new { username = user.Username, email = user.Email, password = user.Password, role = user.RoleId, insertId = id });
+
+        try
+        {
+            await command.ExecuteNonQueryAsync();
+            using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
+            var id = (long?)await command2.ExecuteScalarAsync();
+            Console.WriteLine($"Info: User {user.Username} added to database");
+            return Results.Ok(new { username = user.Username, email = user.Email, password = user.Password, role = user.RoleId, insertId = id });
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+        {
+            return Results.Conflict(new { error = "A user with the same email already exists." });
+        }
     }
 
     public static async Task<IResult> UpdateUser(SqliteConnection connection, int id, UserPatch user)

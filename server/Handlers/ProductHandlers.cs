@@ -57,16 +57,29 @@ public static class ProductHandlers
     public static async Task<IResult> CreateProduct(SqliteConnection connection, ProductCreate product)
     {
         EnsureConnectionOpen(connection);
+        if (string.IsNullOrWhiteSpace(product.Name) || product.Price == null || product.CategoryId == 0)
+            return Results.BadRequest(new { error = "Name, price, and category_id are required" });
+        if (product.Price < 0)
+            return Results.BadRequest(new { error = "Price must be a positive number" });
         var sql = "INSERT INTO products (name, price, category_id) VALUES ($name, $price, $category_id)";
         using var command = new SqliteCommand(sql, connection);
         command.Parameters.AddWithValue("$name", product.Name);
         command.Parameters.AddWithValue("$price", product.Price);
         command.Parameters.AddWithValue("$category_id", product.CategoryId);
-        await command.ExecuteNonQueryAsync();
-        using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
-        var id = (long?)await command2.ExecuteScalarAsync();
-        Console.WriteLine($"Info: Product {product.Name} added to database");
-        return Results.Json(new { name = product.Name, price = product.Price, category = product.CategoryId, insertId = id }, statusCode: 201);
+
+        try
+        {
+
+            await command.ExecuteNonQueryAsync();
+            using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
+            var id = (long?)await command2.ExecuteScalarAsync();
+            Console.WriteLine($"Info: Product {product.Name} added to database");
+            return Results.Json(new { name = product.Name, price = product.Price, category = product.CategoryId, insertId = id }, statusCode: 201);
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+        {
+            return Results.Conflict(new { error = "A product with the same name already exists." });
+        }
     }
 
     public static async Task<IResult> UpdateProduct(SqliteConnection connection, int id, ProductPatch product)
@@ -78,7 +91,7 @@ public static class ProductHandlers
         if (product.CategoryId != null) updates.Add("category_id = $categoryId");
 
         if (updates.Count == 0)
-            return Results.BadRequest("No fields to update");
+            return Results.BadRequest(new { error = "No fields to update" });
 
         var sql = $"UPDATE products SET {string.Join(", ", updates)} WHERE id = $id";
         using var command = new SqliteCommand(sql, connection);
@@ -91,7 +104,7 @@ public static class ProductHandlers
 
         var rowsAffected = await command.ExecuteNonQueryAsync();
         if (rowsAffected == 0)
-            return Results.NotFound();
+            return Results.NotFound(new { message = $"Product with id:{id} not found" });
 
         Console.WriteLine($"Info: Product ID:{id} updated in database");
         return Results.Ok(new { message = $"Product with id:{id} updated" });

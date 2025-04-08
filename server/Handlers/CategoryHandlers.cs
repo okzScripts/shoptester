@@ -39,11 +39,19 @@ public static class CategoryHandlers
         var sql = "INSERT INTO categories (name) VALUES ($name)";
         using var command = new SqliteCommand(sql, connection);
         command.Parameters.AddWithValue("$name", category.Name);
-        await command.ExecuteNonQueryAsync();
-        using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
-        var id = (long?)await command2.ExecuteScalarAsync();
-        Console.WriteLine($"Info: Category {category} added to database");
-        return Results.Ok(new { category = category.Name, insertId = id });
+        try
+        {
+            await command.ExecuteNonQueryAsync();
+            using var command2 = new SqliteCommand("SELECT last_insert_rowid()", connection);
+
+            var id = (long?)await command2.ExecuteScalarAsync();
+            Console.WriteLine($"Info: Category {category} added to database");
+            return Results.Ok(new { category = category.Name, insertId = id });
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+        {
+            return Results.Conflict(new { error = "A category with the same name already exists." });
+        }
     }
 
     public static async Task<IResult> UpdateCategory(SqliteConnection connection, int id, CategoryPatch category)
