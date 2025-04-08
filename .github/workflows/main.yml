@@ -14,18 +14,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore server/
 
       - name: Build
-        run: dotnet build --no-restore
-      - name: Run
-        run: dotnet run
+        run: dotnet build server/ --no-restore
+
+      - name: Run API in background
+        working-directory: server
+        run: |
+          dotnet run &
+          echo "Waiting for API to start..."
+          sleep 10
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
 
       - name: Run tests
         run: dotnet test --no-build --verbosity normal
